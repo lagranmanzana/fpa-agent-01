@@ -1,3 +1,6 @@
+// server.js (ESM)
+// Node + Express + Google Sheets + OpenAI + Frontend estático
+
 import express from "express";
 import { google } from "googleapis";
 import OpenAI from "openai";
@@ -7,22 +10,26 @@ import { fileURLToPath } from "url";
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Static front-end (sirve public/)
+// --- Servir el frontend (carpeta /public) ---
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 app.use(express.static(path.join(__dirname, "public")));
 app.use(express.json());
 
-// 👉 ID de tu documento (FPA - Defog)
+// 👉 ID de tu documento (FPA - Defog), puedes sobreescribirlo en Render con SPREADSHEET_ID
 const spreadsheetId =
   process.env.SPREADSHEET_ID ||
   "1lGZbo2J6_mGGHf8dtvI-T_NtJwXvOZre_hC_8OYZkpQ";
 
-// Helpers
+// --- Helpers ---
 function requireEnvJSON() {
   const raw = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
   if (!raw) throw new Error("Falta GOOGLE_SERVICE_ACCOUNT_JSON");
-  return JSON.parse(raw);
+  try {
+    return JSON.parse(raw);
+  } catch {
+    throw new Error("GOOGLE_SERVICE_ACCOUNT_JSON no es JSON válido");
+  }
 }
 
 async function getSheetsClient() {
@@ -35,7 +42,7 @@ async function getSheetsClient() {
 }
 
 function quoteTabIfNeeded(title) {
-  // Si hay espacios o símbolos, Google Sheets requiere comillas simples; escapamos comillas simples duplicándolas
+  // Si hay espacios/símbolos, hay que envolver con comillas simples y escapar comillas simples duplicándolas
   return /^[A-Za-z0-9_]+$/.test(title) ? title : `'${String(title).replace(/'/g, "''")}'`;
 }
 
@@ -50,7 +57,8 @@ function rowsToCSV(rows, maxRows = 200) {
     .join("\n");
 }
 
-// OpenAI client (recuerda definir OPENAI_API_KEY en Render)
+// --- OpenAI (ChatGPT) ---
+// Define en Render: OPENAI_API_KEY
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 // ---- Rutas API ----
@@ -58,7 +66,7 @@ app.get("/", (_req, res) => {
   res.send("✅ fpa-agent-01 corriendo (Google Sheets + ChatGPT listos)");
 });
 
-// Lista pestañas
+// Lista todas las pestañas de la hoja
 app.get("/tabs", async (_req, res) => {
   try {
     const sheets = await getSheetsClient();
@@ -79,12 +87,14 @@ app.get("/sheet", async (req, res) => {
     const name = String(req.query.name || "");
     const range = String(req.query.range || "A1:Z50");
     if (!name) return res.status(400).json({ ok: false, error: "Falta query ?name=" });
+
     const sheets = await getSheetsClient();
     const qName = quoteTabIfNeeded(name);
     const r = await sheets.spreadsheets.values.get({
       spreadsheetId,
       range: `${qName}!${range}`,
     });
+
     res.json({ ok: true, tab: name, range, values: r.data.values || [] });
   } catch (e) {
     console.error(e);
@@ -97,8 +107,8 @@ app.get("/all-sheets", async (req, res) => {
   try {
     const rows = Math.max(parseInt(req.query.rows || "50", 10), 1);
     const cols = (req.query.cols || "Z").toUpperCase();
-    const sheets = await getSheetsClient();
 
+    const sheets = await getSheetsClient();
     const meta = await sheets.spreadsheets.get({ spreadsheetId });
     const titles = (meta.data.sheets || [])
       .map(s => s.properties?.title)
@@ -192,7 +202,7 @@ ${csv}
   }
 });
 
-// Arranque
+// --- Arranque ---
 app.listen(port, () => {
   console.log(`Servidor escuchando en http://localhost:${port}`);
 });
