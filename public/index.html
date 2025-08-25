@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>fpa-agent-01 · Demo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { font-family: system-ui, Arial, sans-serif; margin: 24px; max-width: 900px; }
+    h1 { margin-bottom: 8px; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+    textarea { width: 100%; height: 120px; }
+    input, select, button, textarea { padding: 8px; font-size: 14px; }
+    pre { background: #f6f8fa; padding: 12px; overflow: auto; white-space: pre-wrap; }
+    .badge { display: inline-block; background: #eef; padding: 2px 8px; border-radius: 8px; margin-left: 8px; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <h1>fpa-agent-01 <span class="badge">Google Sheets + GPT</span></h1>
+
+  <section>
+    <button id="btnTabs">Cargar pestañas</button>
+    <select id="selTab"></select>
+  </section>
+
+  <div class="row">
+    <div>
+      <label>Rango (A1:Z50):</label>
+      <input id="inpRange" value="A1:Z50" />
+    </div>
+    <div>
+      <label>Máx. filas para análisis (CSV):</label>
+      <input id="inpMaxRows" type="number" value="200" />
+    </div>
+  </div>
+
+  <div>
+    <label>Prompt adicional (para dirigir el análisis):</label>
+    <textarea id="taPrompt" placeholder="p.ej.: Enfócate en ingresos por canal, CAC y alertas de coste."></textarea>
+  </div>
+
+  <div style="margin: 12px 0;">
+    <button id="btnRead">Leer pestaña</button>
+    <button id="btnAll">Leer todas</button>
+    <button id="btnAnalyze">Analizar con GPT</button>
+  </div>
+
+  <h3>Resultado</h3>
+  <pre id="out">Pulsa “Cargar pestañas” y selecciona una pestaña…</pre>
+
+  <script>
+    const out = document.getElementById("out");
+    const selTab = document.getElementById("selTab");
+    const inpRange = document.getElementById("inpRange");
+    const inpMaxRows = document.getElementById("inpMaxRows");
+    const taPrompt = document.getElementById("taPrompt");
+
+    function setOut(obj) {
+      out.textContent = typeof obj === "string" ? obj : JSON.stringify(obj, null, 2);
+    }
+
+    document.getElementById("btnTabs").onclick = async () => {
+      setOut("Cargando pestañas…");
+      const r = await fetch("/tabs");
+      const j = await r.json();
+      if (!j.ok) return setOut(j);
+      selTab.innerHTML = "";
+      j.tabs.forEach(t => {
+        const o = document.createElement("option");
+        o.value = t; o.textContent = t;
+        selTab.appendChild(o);
+      });
+      setOut(j);
+    };
+
+    document.getElementById("btnRead").onclick = async () => {
+      const tab = selTab.value;
+      if (!tab) return setOut("Primero carga pestañas y selecciona una.");
+      const range = inpRange.value || "A1:Z50";
+      setOut(`Leyendo ${tab}!${range}…`);
+      const r = await fetch(`/sheet?name=${encodeURIComponent(tab)}&range=${encodeURIComponent(range)}`);
+      setOut(await r.json());
+    };
+
+    document.getElementById("btnAll").onclick = async () => {
+      const rows = parseInt(inpMaxRows.value || "50", 10);
+      setOut(`Leyendo todas las pestañas (primeras ${rows} filas)…`);
+      const r = await fetch(`/all-sheets?rows=${rows}&cols=Z`);
+      setOut(await r.json());
+    };
+
+    document.getElementById("btnAnalyze").onclick = async () => {
+      const tab = selTab.value;
+      if (!tab) return setOut("Primero carga pestañas y selecciona una.");
+      const range = inpRange.value || "A1:Z200";
+      const maxRows = parseInt(inpMaxRows.value || "200", 10);
+      const prompt = taPrompt.value || "";
+      setOut(`Analizando ${tab}!${range} con GPT…`);
+      const q = new URLSearchParams({
+        sheet: tab, range, maxRows, prompt
+      }).toString();
+      const r = await fetch(`/analyze?${q}`);
+      setOut(await r.json());
+    };
+  </script>
+</body>
+</html>

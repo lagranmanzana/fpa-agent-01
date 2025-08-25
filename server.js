@@ -1,18 +1,30 @@
 import express from "express";
 import { google } from "googleapis";
+import OpenAI from "openai";
+import path from "path";
+import { fileURLToPath } from "url";
 
 const app = express();
 const port = process.env.PORT || 3000;
 
-// 👉 ID de tu documento (FPA - Defog)
-const spreadsheetId = "1lGZbo2J6_mGGHf8dtvI-T_NtJwXvOZre_hC_8OYZkpQ";
+// Static front-end (sirve public/)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+app.use(express.static(path.join(__dirname, "public")));
+app.use(express.json());
 
-// --- Helpers ---
+// 👉 ID de tu documento (FPA - Defog)
+const spreadsheetId =
+  process.env.SPREADSHEET_ID ||
+  "1lGZbo2J6_mGGHf8dtvI-T_NtJwXvOZre_hC_8OYZkpQ";
+
+// Helpers
 function requireEnvJSON() {
   const raw = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
   if (!raw) throw new Error("Falta GOOGLE_SERVICE_ACCOUNT_JSON");
   return JSON.parse(raw);
 }
+
 async function getSheetsClient() {
   const creds = requireEnvJSON();
   const auth = new google.auth.GoogleAuth({
@@ -21,22 +33,39 @@ async function getSheetsClient() {
   });
   return google.sheets({ version: "v4", auth: await auth.getClient() });
 }
+
 function quoteTabIfNeeded(title) {
-  // Si hay espacios o símbolos, Google Sheets requiere comillas simples
-  return /^[A-Za-z0-9_]+$/.test(title) ? title : `'${title.replace(/'/g, "''")}'`;
+  // Si hay espacios o símbolos, Google Sheets requiere comillas simples; escapamos comillas simples duplicándolas
+  return /^[A-Za-z0-9_]+$/.test(title) ? title : `'${String(title).replace(/'/g, "''")}'`;
 }
 
-// --- Rutas ---
+function rowsToCSV(rows, maxRows = 200) {
+  const cut = (rows || []).slice(0, maxRows);
+  return cut
+    .map(r =>
+      (r || [])
+        .map(v => (typeof v === "string" ? v.replace(/\r?\n/g, " ") : v))
+        .join(",")
+    )
+    .join("\n");
+}
+
+// OpenAI client (recuerda definir OPENAI_API_KEY en Render)
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+// ---- Rutas API ----
 app.get("/", (_req, res) => {
-  res.send("✅ fpa-agent-01 corriendo (Google Sheets conectado)");
+  res.send("✅ fpa-agent-01 corriendo (Google Sheets + ChatGPT listos)");
 });
 
-// Lista todas las pestañas
+// Lista pestañas
 app.get("/tabs", async (_req, res) => {
   try {
     const sheets = await getSheetsClient();
     const meta = await sheets.spreadsheets.get({ spreadsheetId });
-    const titles = (meta.data.sheets || []).map(s => s.properties?.title).filter(Boolean);
+    const titles = (meta.data.sheets || [])
+      .map(s => s.properties?.title)
+      .filter(Boolean);
     res.json({ ok: true, spreadsheetId, tabs: titles });
   } catch (e) {
     console.error(e);
@@ -47,11 +76,11 @@ app.get("/tabs", async (_req, res) => {
 // Lee una pestaña concreta (?name=OrdersTable&range=A1:Z50)
 app.get("/sheet", async (req, res) => {
   try {
-    const name = req.query.name;
-    const range = req.query.range || "A1:Z50";
+    const name = String(req.query.name || "");
+    const range = String(req.query.range || "A1:Z50");
     if (!name) return res.status(400).json({ ok: false, error: "Falta query ?name=" });
     const sheets = await getSheetsClient();
-    const qName = quoteTabIfNeeded(String(name));
+    const qName = quoteTabIfNeeded(name);
     const r = await sheets.spreadsheets.values.get({
       spreadsheetId,
       range: `${qName}!${range}`,
@@ -63,27 +92,24 @@ app.get("/sheet", async (req, res) => {
   }
 });
 
-// Lee TODAS las pestañas (opcionalmente limita filas/columnas: ?rows=50&cols=Z)
+// Lee TODAS las pestañas (?rows=50&cols=Z)
 app.get("/all-sheets", async (req, res) => {
   try {
     const rows = Math.max(parseInt(req.query.rows || "50", 10), 1);
-    const cols = (req.query.cols || "Z").toUpperCase(); // última columna a leer
+    const cols = (req.query.cols || "Z").toUpperCase();
     const sheets = await getSheetsClient();
 
-    // 1) Obtener títulos de pestañas
     const meta = await sheets.spreadsheets.get({ spreadsheetId });
-    const titles = (meta.data.sheets || []).map(s => s.properties?.title).filter(Boolean);
+    const titles = (meta.data.sheets || [])
+      .map(s => s.properties?.title)
+      .filter(Boolean);
 
-    // 2) Construir rangos seguros
     const ranges = titles.map(t => `${quoteTabIfNeeded(t)}!A1:${cols}${rows}`);
-
-    // 3) Leer en batch
     const resp = await sheets.spreadsheets.values.batchGet({
       spreadsheetId,
       ranges,
     });
 
-    // 4) Empaquetar respuesta { tabName: values }
     const result = {};
     (resp.data.valueRanges || []).forEach((vr, i) => {
       result[titles[i]] = vr.values || [];
@@ -96,21 +122,77 @@ app.get("/all-sheets", async (req, res) => {
   }
 });
 
-// Mantén también un test rápido sobre OrdersTable si quieres
-app.get("/test-sheets", async (_req, res) => {
+// Prompt base FP&A
+const SYSTEM_PROMPT = `
+Eres un analista FP&A. Recibirás datos de una hoja (CSV; primera fila cabeceras).
+Devuelve:
+- Resumen ejecutivo (4–6 líneas).
+- 5 métricas clave en JSON (keys y valores numéricos si procede).
+- Anomalías/insights notables.
+- Recomendaciones accionables en viñetas.
+Responde en ES. Sé conciso y claro. Si faltan columnas relevantes, indícalo.
+`.trim();
+
+// Analiza con OpenAI (?sheet=OrdersTable&range=A1:Z200&maxRows=200&prompt=texto...)
+app.get("/analyze", async (req, res) => {
   try {
+    if (!process.env.OPENAI_API_KEY) {
+      return res.status(400).json({ ok: false, error: "Falta OPENAI_API_KEY en variables de entorno." });
+    }
+
+    const sheetName = String(req.query.sheet || "OrdersTable");
+    const range = String(req.query.range || "A1:Z200");
+    const maxRows = Math.max(parseInt(req.query.maxRows || "200", 10), 1);
+    const userExtra = String(req.query.prompt || "").slice(0, 1500); // prompt opcional desde UI
+
     const sheets = await getSheetsClient();
     const r = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: "OrdersTable!A1:Z5",
+      range: `${quoteTabIfNeeded(sheetName)}!${range}`,
     });
-    res.json({ ok: true, values: r.data.values || [] });
+
+    const rows = r.data.values || [];
+    if (!rows.length) {
+      return res.json({ ok: true, analysis: "No se encontraron filas en el rango indicado.", rows: 0, headers: [] });
+    }
+
+    const headers = rows[0];
+    const csv = rowsToCSV(rows, maxRows);
+
+    const userPrompt = `
+Hoja: ${sheetName}
+Rango: ${range}
+Filas analizadas (máx ${maxRows}):
+${userExtra ? `Instrucciones adicionales del usuario: ${userExtra}\n` : ""}
+CSV:
+${csv}
+`.trim();
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      temperature: 0.3,
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: userPrompt },
+      ],
+    });
+
+    const content = completion.choices?.[0]?.message?.content ?? "Sin contenido de respuesta.";
+    res.json({
+      ok: true,
+      sheet: sheetName,
+      range,
+      rows: rows.length - 1,
+      headers,
+      analysis: content,
+    });
   } catch (e) {
     console.error(e);
     res.status(500).json({ ok: false, error: e.message });
   }
 });
 
+// Arranque
 app.listen(port, () => {
   console.log(`Servidor escuchando en http://localhost:${port}`);
 });
