@@ -1,208 +1,366 @@
 <!doctype html>
-<html lang="es">
+<html lang="es" class="h-full">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Panel ventas • FPA Agent</title>
+  <title>BCEcopilot · Panel de Ventas</title>
+
+  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Flatpickr (date-range picker) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Fuentes -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
   <style>
     :root { color-scheme: light dark; }
+    html, body { height: 100%; }
     body { font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, 'Helvetica Neue', Arial; }
-    .card { @apply bg-white/80 dark:bg-slate-800/80 backdrop-blur rounded-2xl shadow p-5 border border-slate-200 dark:border-slate-700; }
-    .kpi { @apply text-slate-500 dark:text-slate-300 text-sm; }
-    .kpi-value { @apply text-3xl font-semibold text-slate-900 dark:text-white; }
-    .btn { @apply px-4 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-700 disabled:opacity-60; }
-    .input { @apply px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900; }
-    .grid-cards { @apply grid gap-4 md:grid-cols-3; }
+    /* Glass / cards */
+    .glass {
+      backdrop-filter: blur(10px);
+      background: linear-gradient(180deg, rgba(255,255,255,.65), rgba(255,255,255,.35));
+    }
+    .dark .glass {
+      background: linear-gradient(180deg, rgba(15,23,42,.65), rgba(15,23,42,.35));
+    }
+    .card {
+      @apply glass rounded-2xl border border-white/40 dark:border-white/10 shadow-lg p-5;
+    }
+    .kpi-title { @apply text-sm text-slate-600 dark:text-slate-300; }
+    .kpi-value { @apply text-3xl md:text-4xl font-semibold text-slate-900 dark:text-white tracking-tight; }
+    .btn {
+      @apply inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-700 transition disabled:opacity-60;
+    }
+    .btn-secondary {
+      @apply inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 hover:bg-slate-50/50 dark:hover:bg-white/5 transition;
+    }
+    .input {
+      @apply px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white/70 dark:bg-slate-900/60 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500;
+    }
+    .pill {
+      @apply rounded-full px-3 py-1 text-xs font-semibold bg-indigo-50 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200 border border-indigo-100 dark:border-indigo-900/50;
+    }
+    .skeleton {
+      background: linear-gradient(90deg, rgba(148,163,184,.2), rgba(148,163,184,.35), rgba(148,163,184,.2));
+      background-size: 200% 100%;
+      animation: shine 1.2s infinite linear;
+      border-radius: .75rem;
+    }
+    @keyframes shine { from { background-position: 200% 0; } to { background-position: -200% 0; } }
   </style>
 </head>
-<body class="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-950">
-  <div class="max-w-7xl mx-auto px-4 py-8 space-y-6">
-    <header class="flex items-center justify-between">
-      <h1 class="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white">
-        BCEcopilot • Resumen de Ventas
-      </h1>
-      <div class="flex items-center gap-2">
-        <input id="start" type="date" class="input" />
-        <span class="text-slate-500 dark:text-slate-400">→</span>
-        <input id="end" type="date" class="input" />
-        <button id="loadBtn" class="btn">Actualizar</button>
+<body class="bg-gradient-to-br from-indigo-50 via-slate-50 to-slate-100 dark:from-slate-900 dark:via-slate-950 dark:to-slate-900">
+  <div class="max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-10 space-y-6">
+
+    <!-- HEADER -->
+    <header class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="h-10 w-10 rounded-2xl bg-gradient-to-br from-indigo-500 to-fuchsia-500 shadow-lg"></div>
+        <div>
+          <h1 class="text-2xl md:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">BCEcopilot</h1>
+          <p class="text-slate-600 dark:text-slate-300 text-sm">Resumen de ventas — OrdersTable</p>
+        </div>
+      </div>
+
+      <div class="flex flex-col md:flex-row md:items-center gap-3">
+        <div class="flex items-center gap-2">
+          <div class="relative">
+            <input id="dateRange" class="input w-[260px] pr-11" placeholder="Selecciona fecha…" />
+            <svg class="absolute right-3 top-3.5 h-5 w-5 text-slate-400" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M7 2a1 1 0 011 1v1h8V3a1 1 0 112 0v1h1a2 2 0 012 2v3H4V6a2 2 0 012-2h1V3a1 1 0 011-1zM4 10h16v8a2 2 0 01-2 2H6a2 2 0 01-2-2v-8zm4 3a1 1 0 000 2h2a1 1 0 000-2H8z"/>
+            </svg>
+          </div>
+          <button id="refreshBtn" class="btn">
+            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 6V3L8 7l4 4V8a4 4 0 11-4 4H6a6 6 0 106-6z"/></svg>
+            Actualizar
+          </button>
+        </div>
+        <div class="flex gap-2">
+          <button data-preset="7d"  class="btn-secondary">7D</button>
+          <button data-preset="30d" class="btn-secondary">30D</button>
+          <button data-preset="mtd" class="btn-secondary">MTD</button>
+          <button data-preset="ytd" class="btn-secondary">YTD</button>
+        </div>
       </div>
     </header>
 
     <!-- KPIs -->
-    <section class="grid-cards">
-      <div class="card">
-        <div class="kpi">Ventas (EUR)</div>
-        <div id="kpiTotal" class="kpi-value">—</div>
-      </div>
-      <div class="card">
-        <div class="kpi">Pedidos</div>
-        <div id="kpiOrders" class="kpi-value">—</div>
-      </div>
-      <div class="card">
-        <div class="kpi">AOV (EUR)</div>
-        <div id="kpiAOV" class="kpi-value">—</div>
-      </div>
+    <section class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <!-- Ventas -->
+      <article class="card">
+        <div class="flex items-center justify-between">
+          <span class="kpi-title">Ventas</span>
+          <span class="pill">EUR</span>
+        </div>
+        <div id="kpiTotal" class="kpi-value mt-1 skeleton h-10 w-40"></div>
+        <div class="mt-2 text-xs text-slate-500 dark:text-slate-400">Suma de <strong>Item Price</strong> en el período</div>
+      </article>
+
+      <!-- Pedidos -->
+      <article class="card">
+        <div class="flex items-center justify-between">
+          <span class="kpi-title">Pedidos</span>
+          <span class="pill">#</span>
+        </div>
+        <div id="kpiOrders" class="kpi-value mt-1 skeleton h-10 w-24"></div>
+        <div class="mt-2 text-xs text-slate-500 dark:text-slate-400">Número de pedidos registrados</div>
+      </article>
+
+      <!-- AOV -->
+      <article class="card">
+        <div class="flex items-center justify-between">
+          <span class="kpi-title">AOV</span>
+          <span class="pill">EUR / pedido</span>
+        </div>
+        <div id="kpiAOV" class="kpi-value mt-1 skeleton h-10 w-28"></div>
+        <div class="mt-2 text-xs text-slate-500 dark:text-slate-400">Ventas / Pedidos</div>
+      </article>
     </section>
 
-    <!-- Gráfico -->
+    <!-- CHART -->
     <section class="card">
-      <div class="flex items-center justify-between mb-3">
+      <div class="flex items-center justify-between mb-4">
         <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Ventas por día</h2>
+        <span id="periodChip" class="pill">—</span>
       </div>
-      <canvas id="salesChart" height="90"></canvas>
-    </section>
-
-    <!-- Informe ejecutivo -->
-    <section class="card space-y-3">
-      <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Resumen ejecutivo</h2>
-      <div id="summary" class="prose dark:prose-invert max-w-none">
-        <em>Genera un resumen tras cargar los datos…</em>
+      <div class="h-[260px]">
+        <canvas id="salesChart" height="120"></canvas>
       </div>
     </section>
 
-    <!-- Preguntas al analista (ChatGPT) -->
-    <section class="card space-y-3">
-      <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Consultas al analista</h2>
-      <div class="flex gap-2">
-        <input id="ask" class="input flex-1" placeholder="Ej.: ¿Cómo evoluciona el AOV vs la semana pasada?" />
-        <button id="askBtn" class="btn">Preguntar</button>
-      </div>
-      <div id="askOut" class="text-slate-700 dark:text-slate-200"></div>
+    <!-- RESUMEN + PREGUNTA -->
+    <section class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <!-- Resumen ejecutivo -->
+      <article class="card lg:col-span-2 space-y-3">
+        <div class="flex items-center justify-between">
+          <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Resumen ejecutivo</h3>
+          <span class="pill">ChatGPT</span>
+        </div>
+        <div id="summary" class="text-slate-800 dark:text-slate-100 whitespace-pre-wrap">
+          <div class="skeleton h-5 w-11/12 mb-2"></div>
+          <div class="skeleton h-5 w-10/12 mb-2"></div>
+          <div class="skeleton h-5 w-9/12"></div>
+        </div>
+      </article>
+
+      <!-- Consulta -->
+      <article class="card space-y-3">
+        <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Consulta al analista</h3>
+        <div class="relative">
+          <input id="ask" class="input w-full pl-12 pr-28" placeholder="Ej.: ¿Cómo ha evolucionado el AOV en los últimos 14 días?" />
+          <svg class="absolute left-4 top-3.5 h-5 w-5 text-slate-400" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a7 7 0 00-7 7 7 7 0 005 6.71V18a2 2 0 002 2h2a2 2 0 002-2v-2.29A7 7 0 0019 9a7 7 0 00-7-7z"/></svg>
+          <button id="askBtn" class="btn absolute right-2 top-1.5">
+            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M4 4l16 8-16 8 4-8-4-8z"/></svg>
+            Enviar
+          </button>
+        </div>
+        <div id="askOut" class="text-sm text-slate-700 dark:text-slate-300 min-h-[2.5rem]"></div>
+      </article>
     </section>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed left-1/2 -translate-x-1/2 bottom-6 hidden">
+      <div class="px-4 py-2 rounded-xl bg-slate-900 text-white shadow-lg">Hecho.</div>
+    </div>
   </div>
 
   <script>
     const SHEET = "OrdersTable";
-    const fmt = (n) => new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(n || 0);
+
+    // Utils
+    const fmtMoney = (n) => new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(n || 0);
     const fmt2 = (n) => new Intl.NumberFormat("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n || 0);
 
-    const kpiTotal  = document.getElementById("kpiTotal");
-    const kpiOrders = document.getElementById("kpiOrders");
-    const kpiAOV    = document.getElementById("kpiAOV");
-    const startEl   = document.getElementById("start");
-    const endEl     = document.getElementById("end");
-    const loadBtn   = document.getElementById("loadBtn");
-    const summaryEl = document.getElementById("summary");
-    const askEl     = document.getElementById("ask");
-    const askBtn    = document.getElementById("askBtn");
-    const askOut    = document.getElementById("askOut");
+    const qs = (s) => document.querySelector(s);
+    const elTotal  = qs("#kpiTotal");
+    const elOrders = qs("#kpiOrders");
+    const elAOV    = qs("#kpiAOV");
+    const elSummary= qs("#summary");
+    const elAsk    = qs("#ask");
+    const elAskBtn = qs("#askBtn");
+    const elAskOut = qs("#askOut");
+    const elPeriod = qs("#periodChip");
+    const toast    = qs("#toast");
 
-    // Por defecto últimos 30 días
-    const today = new Date();
-    const dEnd = today.toISOString().slice(0,10);
-    const dStart = new Date(today.getTime() - 29*86400000).toISOString().slice(0,10);
-    startEl.value = dStart;
-    endEl.value = dEnd;
+    // Date range picker (Flatpickr)
+    const fp = flatpickr("#dateRange", {
+      mode: "range",
+      dateFormat: "Y-m-d",
+      defaultDate: [offsetDate(-29), todayISO()],
+      locale: {
+        rangeSeparator: " → ",
+        firstDayOfWeek: 1
+      }
+    });
 
+    function todayISO() {
+      return new Date().toISOString().slice(0,10);
+    }
+    function offsetDate(days) {
+      const t = new Date();
+      t.setDate(t.getDate() + days);
+      return t.toISOString().slice(0,10);
+    }
+    function getRange() {
+      const d = fp.selectedDates;
+      // Si el usuario aún no tocó, usamos las default
+      if (!d || d.length < 2) return [offsetDate(-29), todayISO()];
+      const start = new Date(d[0]), end = new Date(d[1]);
+      const s = start.toISOString().slice(0,10);
+      const e = end.toISOString().slice(0,10);
+      return [s, e];
+    }
+    function setPreset(p) {
+      let s, e = todayISO();
+      const today = new Date(); today.setHours(0,0,0,0);
+      const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().slice(0,10);
+      const firstOfYear  = new Date(today.getFullYear(), 0, 1).toISOString().slice(0,10);
+
+      if (p === "7d")  s = offsetDate(-6);
+      if (p === "30d") s = offsetDate(-29);
+      if (p === "mtd") { s = firstOfMonth; }
+      if (p === "ytd") { s = firstOfYear; }
+      fp.setDate([s, e], true);
+    }
+    document.querySelectorAll("[data-preset]").forEach(btn=>{
+      btn.addEventListener("click", ()=> setPreset(btn.dataset.preset));
+    });
+
+    // Chart
     let chart;
-    function drawChart(data) {
+    function drawChart(series) {
       const ctx = document.getElementById("salesChart").getContext("2d");
-      const labels = data.map(d => d.date);
-      const values = data.map(d => d.value);
+      const labels = series.map(d => d.date);
+      const values = series.map(d => d.value);
+
       if (chart) chart.destroy();
+      const gradient = ctx.createLinearGradient(0,0,0,240);
+      gradient.addColorStop(0, "rgba(99,102,241,.35)");
+      gradient.addColorStop(1, "rgba(99,102,241,0)");
+
       chart = new Chart(ctx, {
         type: "line",
         data: {
           labels,
           datasets: [{
-            label: "Ventas",
             data: values,
+            borderColor: "rgb(99,102,241)",
+            backgroundColor: gradient,
+            fill: true,
             tension: .35,
             borderWidth: 2,
-            pointRadius: 0
+            pointRadius: 0,
+            pointHoverRadius: 3
           }]
         },
         options: {
-          plugins: { legend: { display: false }},
+          plugins: { legend: { display:false }},
+          interaction: { intersect:false, mode:"index" },
           scales: {
-            y: { ticks: { callback: (v) => fmt(v).replace(" ", " ") } }
+            x: { ticks: { color: getComputedStyle(document.documentElement).colorScheme === "dark" ? "#CBD5E1" : "#475569" }},
+            y: { ticks: { callback: (v)=> fmtMoney(v).replace(" "," ") } }
           }
         }
       });
     }
 
+    // Loaders
+    function setKPILoading() {
+      elTotal.className  = "kpi-value mt-1 skeleton h-10 w-40";
+      elOrders.className = "kpi-value mt-1 skeleton h-10 w-24";
+      elAOV.className    = "kpi-value mt-1 skeleton h-10 w-28";
+      elSummary.innerHTML = `<div class="skeleton h-5 w-11/12 mb-2"></div>
+                             <div class="skeleton h-5 w-10/12 mb-2"></div>
+                             <div class="skeleton h-5 w-9/12"></div>`;
+    }
+    function setKPIValues({ totalSales, orders, aov }) {
+      elTotal.className  = "kpi-value mt-1";
+      elOrders.className = "kpi-value mt-1";
+      elAOV.className    = "kpi-value mt-1";
+      elTotal.textContent  = fmtMoney(totalSales);
+      elOrders.textContent = orders ?? 0;
+      elAOV.textContent    = fmt2(aov);
+    }
+
+    // Data flow
     async function loadAll() {
-      loadBtn.disabled = true;
+      const [start, end] = getRange();
+      elPeriod.textContent = `${start} → ${end}`;
+      setKPILoading();
+      toggleBtn(true);
+
       try {
-        const start = startEl.value;
-        const end = endEl.value;
-
-        // KPIs
         const mRes = await fetch(`/metrics?sheet=${encodeURIComponent(SHEET)}&start=${start}&end=${end}`);
-        const { ok: okM, metrics } = await mRes.json();
-        if (okM) {
-          kpiTotal.textContent  = fmt(metrics.totalSales);
-          kpiOrders.textContent = metrics.orders ?? 0;
-          kpiAOV.textContent    = fmt2(metrics.aov);
-        }
+        const m = await mRes.json();
+        if (m.ok) setKPIValues(m.metrics);
 
-        // Serie
         const tRes = await fetch(`/timeseries?sheet=${encodeURIComponent(SHEET)}&start=${start}&end=${end}`);
-        const { ok: okT, timeseries } = await tRes.json();
-        if (okT) drawChart(timeseries || []);
+        const t = await tRes.json();
+        if (t.ok) drawChart(t.timeseries || []);
 
-        // Informe ejecutivo
-        const aRes = await fetch("/analyze-metrics", {
+        const aRes = await fetch(`/analyze-metrics`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ metrics, timeseries })
+          headers: {"Content-Type":"application/json"},
+          body: JSON.stringify({ metrics: m.metrics, timeseries: t.timeseries })
         });
-        const aJson = await aRes.json();
-        if (aJson.ok) {
-          summaryEl.textContent = "";
-          const p = document.createElement("div");
-          p.className = "whitespace-pre-wrap";
-          p.textContent = aJson.summary;
-          summaryEl.appendChild(p);
-        } else {
-          summaryEl.textContent = aJson.error || "No se pudo generar el informe.";
-        }
-      } catch (e) {
+        const a = await aRes.json();
+        elSummary.textContent = a.ok ? a.summary : (a.error || "No se pudo generar el informe.");
+        toastFire("Datos actualizados");
+      } catch(e) {
         console.error(e);
-        summaryEl.textContent = "Error cargando datos.";
+        elSummary.textContent = "Error cargando datos.";
       } finally {
-        loadBtn.disabled = false;
+        toggleBtn(false);
       }
     }
 
-    // Preguntas al analista (aprovechamos el mismo endpoint enviando prompt extra)
     async function askAnalyst() {
-      const q = (askEl.value || "").trim();
+      const q = (elAsk.value || "").trim();
       if (!q) return;
-      askBtn.disabled = true;
-      askOut.textContent = "Pensando…";
+      toggleAsk(true);
+      elAskOut.textContent = "Pensando…";
+      const [start, end] = getRange();
+
       try {
-        const start = startEl.value;
-        const end = endEl.value;
-
         const mRes = await fetch(`/metrics?sheet=${encodeURIComponent(SHEET)}&start=${start}&end=${end}`);
-        const { metrics } = await mRes.json();
-
+        const m = await mRes.json();
         const tRes = await fetch(`/timeseries?sheet=${encodeURIComponent(SHEET)}&start=${start}&end=${end}`);
-        const { timeseries } = await tRes.json();
+        const t = await tRes.json();
 
-        const aRes = await fetch("/analyze-metrics", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ metrics, timeseries, userPrompt: q })
+        const aRes = await fetch(`/analyze-metrics`, {
+          method:"POST", headers:{"Content-Type":"application/json"},
+          body: JSON.stringify({ metrics: m.metrics, timeseries: t.timeseries, userPrompt: q })
         });
-        const aJson = await aRes.json();
-        askOut.textContent = aJson.ok ? aJson.summary : (aJson.error || "No se pudo responder.");
-      } catch (e) {
+        const a = await aRes.json();
+        elAskOut.textContent = a.ok ? a.summary : (a.error || "No se pudo responder.");
+      } catch(e) {
         console.error(e);
-        askOut.textContent = "Error procesando la pregunta.";
+        elAskOut.textContent = "Error procesando la consulta.";
       } finally {
-        askBtn.disabled = false;
+        toggleAsk(false);
       }
     }
 
-    loadBtn.addEventListener("click", loadAll);
-    askBtn.addEventListener("click", askAnalyst);
+    // UI helpers
+    const refreshBtn = qs("#refreshBtn");
+    refreshBtn.addEventListener("click", loadAll);
+    elAskBtn.addEventListener("click", askAnalyst);
+
+    function toggleBtn(disabled){ refreshBtn.disabled = disabled; }
+    function toggleAsk(disabled){ elAskBtn.disabled = disabled; }
+    function toastFire(msg){
+      toast.querySelector("div").textContent = msg || "Hecho.";
+      toast.classList.remove("hidden");
+      setTimeout(()=> toast.classList.add("hidden"), 1500);
+    }
 
     // Primer render
     loadAll();

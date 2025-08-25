@@ -1,4 +1,11 @@
+# Ignorar dependencias
 node_modules/
+
+# Logs
 npm-debug.log
+
+# Variables de entorno
 .env
-*.json
+
+# Solo ignorar las claves privadas JSON (ajusta el nombre real si cambia)
+fpa-0125-*.json
