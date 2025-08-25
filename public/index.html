@@ -1,106 +1,212 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 <head>
   <meta charset="utf-8" />
-  <title>fpa-agent-01 · Demo</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Panel ventas • FPA Agent</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
-    body { font-family: system-ui, Arial, sans-serif; margin: 24px; max-width: 900px; }
-    h1 { margin-bottom: 8px; }
-    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
-    textarea { width: 100%; height: 120px; }
-    input, select, button, textarea { padding: 8px; font-size: 14px; }
-    pre { background: #f6f8fa; padding: 12px; overflow: auto; white-space: pre-wrap; }
-    .badge { display: inline-block; background: #eef; padding: 2px 8px; border-radius: 8px; margin-left: 8px; font-size: 12px; }
+    :root { color-scheme: light dark; }
+    body { font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, 'Helvetica Neue', Arial; }
+    .card { @apply bg-white/80 dark:bg-slate-800/80 backdrop-blur rounded-2xl shadow p-5 border border-slate-200 dark:border-slate-700; }
+    .kpi { @apply text-slate-500 dark:text-slate-300 text-sm; }
+    .kpi-value { @apply text-3xl font-semibold text-slate-900 dark:text-white; }
+    .btn { @apply px-4 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-700 disabled:opacity-60; }
+    .input { @apply px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900; }
+    .grid-cards { @apply grid gap-4 md:grid-cols-3; }
   </style>
 </head>
-<body>
-  <h1>fpa-agent-01 <span class="badge">Google Sheets + GPT</span></h1>
+<body class="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-950">
+  <div class="max-w-7xl mx-auto px-4 py-8 space-y-6">
+    <header class="flex items-center justify-between">
+      <h1 class="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white">
+        BCEcopilot • Resumen de Ventas
+      </h1>
+      <div class="flex items-center gap-2">
+        <input id="start" type="date" class="input" />
+        <span class="text-slate-500 dark:text-slate-400">→</span>
+        <input id="end" type="date" class="input" />
+        <button id="loadBtn" class="btn">Actualizar</button>
+      </div>
+    </header>
 
-  <section>
-    <button id="btnTabs">Cargar pestañas</button>
-    <select id="selTab"></select>
-  </section>
+    <!-- KPIs -->
+    <section class="grid-cards">
+      <div class="card">
+        <div class="kpi">Ventas (EUR)</div>
+        <div id="kpiTotal" class="kpi-value">—</div>
+      </div>
+      <div class="card">
+        <div class="kpi">Pedidos</div>
+        <div id="kpiOrders" class="kpi-value">—</div>
+      </div>
+      <div class="card">
+        <div class="kpi">AOV (EUR)</div>
+        <div id="kpiAOV" class="kpi-value">—</div>
+      </div>
+    </section>
 
-  <div class="row">
-    <div>
-      <label>Rango (A1:Z50):</label>
-      <input id="inpRange" value="A1:Z50" />
-    </div>
-    <div>
-      <label>Máx. filas para análisis (CSV):</label>
-      <input id="inpMaxRows" type="number" value="200" />
-    </div>
+    <!-- Gráfico -->
+    <section class="card">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Ventas por día</h2>
+      </div>
+      <canvas id="salesChart" height="90"></canvas>
+    </section>
+
+    <!-- Informe ejecutivo -->
+    <section class="card space-y-3">
+      <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Resumen ejecutivo</h2>
+      <div id="summary" class="prose dark:prose-invert max-w-none">
+        <em>Genera un resumen tras cargar los datos…</em>
+      </div>
+    </section>
+
+    <!-- Preguntas al analista (ChatGPT) -->
+    <section class="card space-y-3">
+      <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Consultas al analista</h2>
+      <div class="flex gap-2">
+        <input id="ask" class="input flex-1" placeholder="Ej.: ¿Cómo evoluciona el AOV vs la semana pasada?" />
+        <button id="askBtn" class="btn">Preguntar</button>
+      </div>
+      <div id="askOut" class="text-slate-700 dark:text-slate-200"></div>
+    </section>
   </div>
-
-  <div>
-    <label>Prompt adicional (para dirigir el análisis):</label>
-    <textarea id="taPrompt" placeholder="p.ej.: Enfócate en ingresos por canal, CAC y alertas de coste."></textarea>
-  </div>
-
-  <div style="margin: 12px 0;">
-    <button id="btnRead">Leer pestaña</button>
-    <button id="btnAll">Leer todas</button>
-    <button id="btnAnalyze">Analizar con GPT</button>
-  </div>
-
-  <h3>Resultado</h3>
-  <pre id="out">Pulsa “Cargar pestañas” y selecciona una pestaña…</pre>
 
   <script>
-    const out = document.getElementById("out");
-    const selTab = document.getElementById("selTab");
-    const inpRange = document.getElementById("inpRange");
-    const inpMaxRows = document.getElementById("inpMaxRows");
-    const taPrompt = document.getElementById("taPrompt");
+    const SHEET = "OrdersTable";
+    const fmt = (n) => new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(n || 0);
+    const fmt2 = (n) => new Intl.NumberFormat("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n || 0);
 
-    function setOut(obj) {
-      out.textContent = typeof obj === "string" ? obj : JSON.stringify(obj, null, 2);
+    const kpiTotal  = document.getElementById("kpiTotal");
+    const kpiOrders = document.getElementById("kpiOrders");
+    const kpiAOV    = document.getElementById("kpiAOV");
+    const startEl   = document.getElementById("start");
+    const endEl     = document.getElementById("end");
+    const loadBtn   = document.getElementById("loadBtn");
+    const summaryEl = document.getElementById("summary");
+    const askEl     = document.getElementById("ask");
+    const askBtn    = document.getElementById("askBtn");
+    const askOut    = document.getElementById("askOut");
+
+    // Por defecto últimos 30 días
+    const today = new Date();
+    const dEnd = today.toISOString().slice(0,10);
+    const dStart = new Date(today.getTime() - 29*86400000).toISOString().slice(0,10);
+    startEl.value = dStart;
+    endEl.value = dEnd;
+
+    let chart;
+    function drawChart(data) {
+      const ctx = document.getElementById("salesChart").getContext("2d");
+      const labels = data.map(d => d.date);
+      const values = data.map(d => d.value);
+      if (chart) chart.destroy();
+      chart = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels,
+          datasets: [{
+            label: "Ventas",
+            data: values,
+            tension: .35,
+            borderWidth: 2,
+            pointRadius: 0
+          }]
+        },
+        options: {
+          plugins: { legend: { display: false }},
+          scales: {
+            y: { ticks: { callback: (v) => fmt(v).replace(" ", " ") } }
+          }
+        }
+      });
     }
 
-    document.getElementById("btnTabs").onclick = async () => {
-      setOut("Cargando pestañas…");
-      const r = await fetch("/tabs");
-      const j = await r.json();
-      if (!j.ok) return setOut(j);
-      selTab.innerHTML = "";
-      j.tabs.forEach(t => {
-        const o = document.createElement("option");
-        o.value = t; o.textContent = t;
-        selTab.appendChild(o);
-      });
-      setOut(j);
-    };
+    async function loadAll() {
+      loadBtn.disabled = true;
+      try {
+        const start = startEl.value;
+        const end = endEl.value;
 
-    document.getElementById("btnRead").onclick = async () => {
-      const tab = selTab.value;
-      if (!tab) return setOut("Primero carga pestañas y selecciona una.");
-      const range = inpRange.value || "A1:Z50";
-      setOut(`Leyendo ${tab}!${range}…`);
-      const r = await fetch(`/sheet?name=${encodeURIComponent(tab)}&range=${encodeURIComponent(range)}`);
-      setOut(await r.json());
-    };
+        // KPIs
+        const mRes = await fetch(`/metrics?sheet=${encodeURIComponent(SHEET)}&start=${start}&end=${end}`);
+        const { ok: okM, metrics } = await mRes.json();
+        if (okM) {
+          kpiTotal.textContent  = fmt(metrics.totalSales);
+          kpiOrders.textContent = metrics.orders ?? 0;
+          kpiAOV.textContent    = fmt2(metrics.aov);
+        }
 
-    document.getElementById("btnAll").onclick = async () => {
-      const rows = parseInt(inpMaxRows.value || "50", 10);
-      setOut(`Leyendo todas las pestañas (primeras ${rows} filas)…`);
-      const r = await fetch(`/all-sheets?rows=${rows}&cols=Z`);
-      setOut(await r.json());
-    };
+        // Serie
+        const tRes = await fetch(`/timeseries?sheet=${encodeURIComponent(SHEET)}&start=${start}&end=${end}`);
+        const { ok: okT, timeseries } = await tRes.json();
+        if (okT) drawChart(timeseries || []);
 
-    document.getElementById("btnAnalyze").onclick = async () => {
-      const tab = selTab.value;
-      if (!tab) return setOut("Primero carga pestañas y selecciona una.");
-      const range = inpRange.value || "A1:Z200";
-      const maxRows = parseInt(inpMaxRows.value || "200", 10);
-      const prompt = taPrompt.value || "";
-      setOut(`Analizando ${tab}!${range} con GPT…`);
-      const q = new URLSearchParams({
-        sheet: tab, range, maxRows, prompt
-      }).toString();
-      const r = await fetch(`/analyze?${q}`);
-      setOut(await r.json());
-    };
+        // Informe ejecutivo
+        const aRes = await fetch("/analyze-metrics", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ metrics, timeseries })
+        });
+        const aJson = await aRes.json();
+        if (aJson.ok) {
+          summaryEl.textContent = "";
+          const p = document.createElement("div");
+          p.className = "whitespace-pre-wrap";
+          p.textContent = aJson.summary;
+          summaryEl.appendChild(p);
+        } else {
+          summaryEl.textContent = aJson.error || "No se pudo generar el informe.";
+        }
+      } catch (e) {
+        console.error(e);
+        summaryEl.textContent = "Error cargando datos.";
+      } finally {
+        loadBtn.disabled = false;
+      }
+    }
+
+    // Preguntas al analista (aprovechamos el mismo endpoint enviando prompt extra)
+    async function askAnalyst() {
+      const q = (askEl.value || "").trim();
+      if (!q) return;
+      askBtn.disabled = true;
+      askOut.textContent = "Pensando…";
+      try {
+        const start = startEl.value;
+        const end = endEl.value;
+
+        const mRes = await fetch(`/metrics?sheet=${encodeURIComponent(SHEET)}&start=${start}&end=${end}`);
+        const { metrics } = await mRes.json();
+
+        const tRes = await fetch(`/timeseries?sheet=${encodeURIComponent(SHEET)}&start=${start}&end=${end}`);
+        const { timeseries } = await tRes.json();
+
+        const aRes = await fetch("/analyze-metrics", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ metrics, timeseries, userPrompt: q })
+        });
+        const aJson = await aRes.json();
+        askOut.textContent = aJson.ok ? aJson.summary : (aJson.error || "No se pudo responder.");
+      } catch (e) {
+        console.error(e);
+        askOut.textContent = "Error procesando la pregunta.";
+      } finally {
+        askBtn.disabled = false;
+      }
+    }
+
+    loadBtn.addEventListener("click", loadAll);
+    askBtn.addEventListener("click", askAnalyst);
+
+    // Primer render
+    loadAll();
   </script>
 </body>
 </html>
+
