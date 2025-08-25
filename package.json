@@ -1,0 +1,21 @@
+{
+  "name": "fpa-agent-01",
+  "version": "1.0.0",
+  "description": "Servidor Node.js con Express que expone datos de Google Sheets",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^5.1.0",
+    "googleapis": "^157.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  }
+}
+
