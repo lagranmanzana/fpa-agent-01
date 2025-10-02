@@ -130,9 +130,9 @@
     </section>
 
     <!-- RESUMEN + PREGUNTA -->
-    <section class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-      <!-- Resumen ejecutivo -->
-      <article class="card lg:col-span-2 space-y-3">
+    <!-- RESUMEN EJECUTIVO (destacado) -->
+    <section class="grid grid-cols-1 gap-4">
+      <article class="card lg:col-span-2 space-y-3 border-2 border-indigo-500/30 bg-indigo-50/40 dark:bg-indigo-900/10">
         <div class="flex items-center justify-between">
           <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Resumen ejecutivo</h3>
           <div class="flex items-center gap-2">
@@ -148,9 +148,11 @@
           <div class="skeleton h-5 w-9/12"></div>
         </div>
       </article>
+    </section>
 
-      <!-- Consulta -->
-      <article class="card space-y-3">
+    <!-- CONSULTA AL ANALISTA (debajo del resumen) -->
+    <section class="grid grid-cols-1 gap-4">
+      <article class="card space-y-4">
         <div class="flex items-center justify-between">
           <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Consulta al analista</h3>
           <div class="text-xs text-slate-500 dark:text-slate-400">Enter para enviar · Shift+Enter salto de línea</div>
@@ -163,8 +165,10 @@
           <button class="btn-secondary suggestion" data-q="¿Hay estacionalidad semanal?">Estacionalidad</button>
         </div>
 
+        <!-- Input con avatar -->
         <div class="relative">
-          <textarea id="ask" class="input w-full pl-12 pr-28 min-h[80px] min-h-[80px] resize-y" placeholder="Escribe tu pregunta al analista…" aria-label="Pregunta al analista"></textarea>
+          <img id="userAvatar" src="/avatar.png" alt="Tu avatar" class="absolute left-3 top-2.5 h-8 w-8 rounded-full object-cover border border-white/40 dark:border-white/10 hidden" onerror="this.classList.add('hidden')">
+          <textarea id="ask" class="input w-full pl-14 pr-28 min-h-[80px] resize-y" placeholder="Escribe tu pregunta al analista…" aria-label="Pregunta al analista"></textarea>
           <svg class="absolute left-4 top-3.5 h-5 w-5 text-slate-400" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a7 7 0 00-7 7 7 7 0 005 6.71V18a2 2 0 002 2h2a2 2 0 002-2v-2.29A7 7 0 0019 9a7 7 0 00-7-7z"/></svg>
           <div class="absolute right-2 top-1.5 flex items-center gap-2">
             <span id="charCount" class="text-xs text-slate-400">0</span>
@@ -174,7 +178,8 @@
             </button>
           </div>
         </div>
-        <div id="askOut" class="prose-md text-sm text-slate-800 dark:text-slate-100 min-h-[2.5rem] max-h-[260px] overflow-auto rounded-xl border border-slate-200 dark:border-slate-800 p-3 bg-white/60 dark:bg-slate-900/40" aria-live="polite"></div>
+
+        <div id="askOut" class="prose-md text-sm text-slate-800 dark:text-slate-100 min-h-[2.5rem] max-h-[260px] overflow-auto rounded-xl border-2 border-indigo-500/20 dark:border-indigo-400/20 p-3 bg-white/60 dark:bg-slate-900/40" aria-live="polite"></div>
       </article>
     </section>
 
