@@ -2,10 +2,10 @@
 <html lang="es" class="h-full">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>BCEcopilot · Panel de Ventas</title>
   <meta name="description" content="Panel de ventas con KPIs, serie temporal y análisis asistido por IA" />
-  <meta name="theme-color" content="#111827" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#0B1220" media="(prefers-color-scheme: dark)">
   <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
 
   <!-- Tailwind CSS -->
@@ -18,7 +18,7 @@
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-  <!-- Markdown renderer (for respuestas del analista) -->
+  <!-- Markdown renderer (para la respuesta del analista) -->
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
   <!-- Fuentes -->
@@ -29,170 +29,195 @@
     :root { color-scheme: light dark; }
     html, body { height: 100%; }
     body { font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, 'Helvetica Neue', Arial; }
-    /* Glass / cards */
-    .glass { backdrop-filter: blur(10px); background: linear-gradient(180deg, rgba(255,255,255,.65), rgba(255,255,255,.35)); }
-    .dark .glass { background: linear-gradient(180deg, rgba(15,23,42,.65), rgba(15,23,42,.35)); }
-    .card { @apply glass rounded-2xl border border-white/40 dark:border-white/10 shadow-lg p-5; }
-    .kpi-title { @apply text-sm text-slate-600 dark:text-slate-300; }
-    .kpi-value { @apply text-3xl md:text-4xl font-semibold text-slate-900 dark:text-white tracking-tight; }
-    .btn { @apply inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-700 transition disabled:opacity-60; }
-    .btn-secondary { @apply inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 hover:bg-slate-50/50 dark:hover:bg-white/5 transition; }
+
+    /* ====== Estilos utilitarios propios ====== */
+    .glass { backdrop-filter: saturate(120%) blur(8px); background: linear-gradient(180deg, rgba(255,255,255,.7), rgba(255,255,255,.45)); }
+    .dark .glass { background: linear-gradient(180deg, rgba(15,23,42,.6), rgba(15,23,42,.35)); }
+    .card { @apply glass rounded-2xl border border-black/5 dark:border-white/10 shadow-lg p-4 md:p-5; }
+    .kpi-title { @apply text-xs font-medium tracking-wide text-slate-600 dark:text-slate-300; }
+    .kpi-value { @apply text-[28px] md:text-4xl leading-none font-semibold text-slate-900 dark:text-white tracking-tight; }
+    .btn { @apply inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-slate-900 text-white hover:bg-slate-700 transition disabled:opacity-60 active:scale-[.98]; }
+    .btn-secondary { @apply inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 hover:bg-slate-50/60 dark:hover:bg-white/5 transition active:scale-[.98]; }
     .btn-ghost { @apply inline-flex items-center gap-2 px-3 py-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100/60 dark:hover:bg-white/5 transition; }
-    .input { @apply px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white/70 dark:bg-slate-900/60 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500; }
-    .pill { @apply rounded-full px-3 py-1 text-xs font-semibold bg-indigo-50 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200 border border-indigo-100 dark:border-indigo-900/50; }
-    .skeleton { background: linear-gradient(90deg, rgba(148,163,184,.2), rgba(148,163,184,.35), rgba(148,163,184,.2)); background-size: 200% 100%; animation: shine 1.2s infinite linear; border-radius: .75rem; }
-    @keyframes shine { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+    .chip { @apply shrink-0 rounded-full px-3 py-1 text-xs font-semibold bg-indigo-50 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200 border border-indigo-100 dark:border-indigo-900/50; }
+    .input { @apply px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-900/60 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500; }
+    .skeleton { background: linear-gradient(90deg, rgba(148,163,184,.18), rgba(148,163,184,.32), rgba(148,163,184,.18)); background-size: 200% 100%; animation: shine 1.15s infinite linear; border-radius: .75rem; }
+    @keyframes shine { from{background-position:200% 0} to{background-position:-200% 0} }
+
     /* Markdown (respuesta del analista) */
     .prose-md p { @apply my-2; }
     .prose-md h1, .prose-md h2, .prose-md h3 { @apply font-semibold mt-4 mb-2; }
     .prose-md code { @apply rounded bg-slate-800/90 text-slate-100 px-1 py-0.5 text-[0.85em]; }
     .prose-md pre { @apply overflow-auto rounded-xl p-3 bg-slate-900 text-slate-100 text-sm; }
     .prose-md ul { @apply list-disc pl-6 my-2; }
+
+    /* Safe areas (iOS notch) */
+    .safe-bottom { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
+    .safe-top { padding-top: max(.75rem, env(safe-area-inset-top)); }
+
+    /* Oculta flechas de input number en iOS/Android */
+    input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
   </style>
 </head>
-<body class="bg-gradient-to-br from-indigo-50 via-slate-50 to-slate-100 dark:from-slate-900 dark:via-slate-950 dark:to-slate-900">
-  <div class="max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-10 space-y-6">
-
-    <!-- HEADER -->
-    <header class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-      <div class="flex items-center gap-3">
-        <div class="h-10 w-10 rounded-2xl bg-gradient-to-br from-indigo-500 to-fuchsia-500 shadow-lg"></div>
-        <div>
-          <h1 class="text-2xl md:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">BCEcopilot</h1>
-          <p class="text-slate-600 dark:text-slate-300 text-sm">Resumen de ventas — OrdersTable</p>
+<body class="bg-gradient-to-b from-indigo-50 via-white to-white dark:from-slate-950 dark:via-slate-950 dark:to-slate-900">
+  <!-- ====== Barra superior (sticky) ====== -->
+  <header class="sticky top-0 z-40 safe-top backdrop-blur bg-white/70 dark:bg-slate-950/70 border-b border-black/5 dark:border-white/10">
+    <div class="max-w-7xl mx-auto px-4 md:px-6 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="h-9 w-9 rounded-xl bg-gradient-to-br from-indigo-500 to-fuchsia-500 shadow"></div>
+        <div class="truncate">
+          <h1 class="text-lg md:text-xl font-semibold tracking-tight text-slate-900 dark:text-white truncate">BCEcopilot</h1>
+          <p class="text-[12px] text-slate-600 dark:text-slate-300 truncate">Resumen de ventas — OrdersTable</p>
         </div>
       </div>
+      <button id="refreshBtn" class="btn h-10 px-3 md:px-4" aria-label="Actualizar datos">
+        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 6V3L8 7l4 4V8a4 4 0 11-4 4H6a6 6 0 106-6z"/></svg>
+        <span class="hidden sm:inline">Actualizar</span>
+      </button>
+    </div>
 
-      <div class="flex flex-col md:flex-row md:items-center gap-3 w-full md:w-auto">
-        <div class="flex items-center gap-2 w-full md:w-auto">
-          <div class="relative">
-            <input id="dateRange" class="input w-full md:w-[260px] pr-11" placeholder="Selecciona fecha…" aria-label="Rango de fechas" />
-            <svg class="pointer-events-none absolute right-3 top-3.5 h-5 w-5 text-slate-400" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M7 2a1 1 0 011 1v1h8V3a1 1 0 112 0v1h1a2 2 0 012 2v3H4V6a2 2 0 012-2h1V3a1 1 0 011-1zM4 10h16v8a2 2 0 01-2 2H6a2 2 0 01-2-2v-8zm4 3a1 1 0 000 2h2a1 1 0 000-2H8z"/>
-            </svg>
-          </div>
-          <button id="refreshBtn" class="btn" aria-label="Actualizar datos">
-            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 6V3L8 7l4 4V8a4 4 0 11-4 4H6a6 6 0 106-6z"/></svg>
-            Actualizar
-          </button>
+    <!-- Chips de presets (scroll horizontal) -->
+    <div class="max-w-7xl mx-auto px-4 md:px-6 pb-3 overflow-x-auto">
+      <div class="flex gap-2 w-max">
+        <button data-preset="7d"  class="btn-secondary preset text-sm">Últimos 7 días</button>
+        <button data-preset="30d" class="btn-secondary preset text-sm">Últimos 30 días</button>
+        <button data-preset="mtd" class="btn-secondary preset text-sm">Mes en curso</button>
+        <button data-preset="ytd" class="btn-secondary preset text-sm">Año en curso</button>
+        <div class="relative">
+          <input id="dateRange" class="input pr-11 text-sm w-56" placeholder="Rango personalizado" aria-label="Rango de fechas" />
+          <svg class="pointer-events-none absolute right-3 top-2.5 h-5 w-5 text-slate-400" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M7 2a1 1 0 011 1v1h8V3a1 1 0 112 0v1h1a2 2 0 012 2v3H4V6a2 2 0 012-2h1V3a1 1 0 011-1zM4 10h16v8a2 2 0 01-2 2H6a2 2 0 01-2-2v-8zm4 3a1 1 0 000 2h2a1 1 0 000-2H8z"/>
+          </svg>
         </div>
-        <div class="flex gap-2">
-          <button data-preset="7d"  class="btn-secondary preset">7D</button>
-          <button data-preset="30d" class="btn-secondary preset">30D</button>
-          <button data-preset="mtd" class="btn-secondary preset">MTD</button>
-          <button data-preset="ytd" class="btn-secondary preset">YTD</button>
-        </div>
+        <span id="periodChip" class="chip">—</span>
       </div>
-    </header>
+    </div>
+  </header>
 
-    <!-- KPIs -->
-    <section class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-      <!-- Ventas -->
+  <!-- ====== Contenido principal ====== -->
+  <main class="max-w-7xl mx-auto px-4 md:px-6 py-4 md:py-6 space-y-4 md:space-y-6">
+
+    <!-- KPIs (stack en móvil) -->
+    <section class="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
       <article class="card">
         <div class="flex items-center justify-between">
           <span class="kpi-title">Ventas</span>
-          <span class="pill">EUR</span>
+          <span class="chip">EUR</span>
         </div>
-        <div id="kpiTotal" class="kpi-value mt-1 skeleton h-10 w-40" aria-live="polite"></div>
+        <div id="kpiTotal" class="kpi-value mt-2 skeleton h-9 w-40" aria-live="polite"></div>
         <div class="mt-2 text-xs text-slate-500 dark:text-slate-400">Suma de <strong>Item Price</strong> en el período</div>
       </article>
 
-      <!-- Pedidos -->
       <article class="card">
         <div class="flex items-center justify-between">
           <span class="kpi-title">Pedidos</span>
-          <span class="pill">#</span>
+          <span class="chip">#</span>
         </div>
-        <div id="kpiOrders" class="kpi-value mt-1 skeleton h-10 w-24" aria-live="polite"></div>
+        <div id="kpiOrders" class="kpi-value mt-2 skeleton h-9 w-24" aria-live="polite"></div>
         <div class="mt-2 text-xs text-slate-500 dark:text-slate-400">Número de pedidos registrados</div>
       </article>
 
-      <!-- AOV -->
       <article class="card">
         <div class="flex items-center justify-between">
           <span class="kpi-title">AOV</span>
-          <span class="pill">EUR / pedido</span>
+          <span class="chip">EUR / pedido</span>
         </div>
-        <div id="kpiAOV" class="kpi-value mt-1 skeleton h-10 w-28" aria-live="polite"></div>
+        <div id="kpiAOV" class="kpi-value mt-2 skeleton h-9 w-28" aria-live="polite"></div>
         <div class="mt-2 text-xs text-slate-500 dark:text-slate-400">Ventas / Pedidos</div>
       </article>
     </section>
 
-    <!-- CHART -->
+    <!-- Gráfico -->
     <section class="card">
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Ventas por día</h2>
-        <span id="periodChip" class="pill">—</span>
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-base md:text-lg font-semibold text-slate-900 dark:text-white">Ventas por día</h2>
       </div>
-      <div class="h-[260px]">
-        <canvas id="salesChart" height="120" aria-label="Gráfico de ventas por día" role="img"></canvas>
+      <div class="h-[220px] md:h-[280px]"><canvas id="salesChart" height="120" aria-label="Gráfico de ventas por día" role="img"></canvas></div>
+    </section>
+
+    <!-- Resumen ejecutivo -->
+    <section class="card border-2 border-indigo-500/30 bg-indigo-50/40 dark:bg-indigo-900/10 space-y-3">
+      <div class="flex items-center justify-between">
+        <h3 class="text-base md:text-lg font-semibold text-slate-900 dark:text-white">Resumen ejecutivo</h3>
+        <div class="flex items-center gap-2">
+          <span class="chip">ChatGPT</span>
+          <button id="copySummary" class="btn-ghost" title="Copiar" aria-label="Copiar resumen">
+            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M8 7a3 3 0 013-3h7a3 3 0 013 3v7a3 3 0 01-3 3h-1v1a3 3 0 01-3 3H7a3 3 0 01-3-3v-7a3 3 0 013-3h1V7z"/></svg>
+          </button>
+        </div>
+      </div>
+      <div id="summary" class="prose-md text-slate-800 dark:text-slate-100 whitespace-pre-wrap">
+        <div class="skeleton h-5 w-11/12 mb-2"></div>
+        <div class="skeleton h-5 w-10/12 mb-2"></div>
+        <div class="skeleton h-5 w-9/12"></div>
       </div>
     </section>
 
-    <!-- RESUMEN + PREGUNTA -->
-    <!-- RESUMEN EJECUTIVO (destacado) -->
-    <section class="grid grid-cols-1 gap-4">
-      <article class="card lg:col-span-2 space-y-3 border-2 border-indigo-500/30 bg-indigo-50/40 dark:bg-indigo-900/10">
-        <div class="flex items-center justify-between">
-          <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Resumen ejecutivo</h3>
-          <div class="flex items-center gap-2">
-            <span class="pill">ChatGPT</span>
-            <button id="copySummary" class="btn-ghost" title="Copiar" aria-label="Copiar resumen">
-              <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M8 7a3 3 0 013-3h7a3 3 0 013 3v7a3 3 0 01-3 3h-1v1a3 3 0 01-3 3H7a3 3 0 01-3-3v-7a3 3 0 013-3h1V7z"/></svg>
-            </button>
-          </div>
+    <!-- Consulta al analista (Bottom sheet en móvil) -->
+    <section class="card space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 class="text-base md:text-lg font-semibold text-slate-900 dark:text-white">Consulta al analista</h3>
+        <div class="text-[11px] text-slate-500 dark:text-slate-400">Enter para enviar · Shift+Enter salto</div>
+      </div>
+
+      <!-- Sugerencias rápidas (scroll si no caben) -->
+      <div class="flex gap-2 overflow-x-auto pb-1">
+        <button class="btn-secondary suggestion" data-q="¿Cómo ha evolucionado el AOV en los últimos 14 días?">AOV 14D</button>
+        <button class="btn-secondary suggestion" data-q="Top 5 días por ventas y explicación breve">Top días</button>
+        <button class="btn-secondary suggestion" data-q="¿Hay estacionalidad semanal?">Estacionalidad</button>
+      </div>
+
+      <div class="relative">
+        <img id="userAvatar" src="/avatar.png" alt="Tu avatar" class="absolute left-3 top-2.5 h-8 w-8 rounded-full object-cover border border-white/40 dark:border-white/10 hidden" onerror="this.classList.add('hidden')">
+        <textarea id="ask" class="input w-full pl-14 pr-28 min-h-[92px] resize-y" placeholder="Escribe tu pregunta al analista…" aria-label="Pregunta al analista"></textarea>
+        <svg class="absolute left-4 top-3.5 h-5 w-5 text-slate-400" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a7 7 0 00-7 7 7 7 0 005 6.71V18a2 2 0 002 2h2a2 2 0 002-2v-2.29A7 7 0 0019 9a7 7 0 00-7-7z"/></svg>
+        <div class="absolute right-2 top-1.5 flex items-center gap-2">
+          <span id="charCount" class="text-xs text-slate-400">0</span>
+          <button id="askBtn" class="btn" aria-label="Enviar consulta">
+            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M4 4l16 8-16 8 4-8-4-8z"/></svg>
+            <span class="hidden sm:inline">Enviar</span>
+          </button>
         </div>
-        <div id="summary" class="prose-md text-slate-800 dark:text-slate-100 whitespace-pre-wrap">
-          <div class="skeleton h-5 w-11/12 mb-2"></div>
-          <div class="skeleton h-5 w-10/12 mb-2"></div>
-          <div class="skeleton h-5 w-9/12"></div>
-        </div>
-      </article>
+      </div>
+
+      <div id="askOut" class="prose-md text-sm text-slate-800 dark:text-slate-100 min-h-[2.5rem] max-h-[260px] overflow-auto rounded-xl border-2 border-indigo-500/20 dark:border-indigo-400/20 p-3 bg-white/60 dark:bg-slate-900/40" aria-live="polite"></div>
     </section>
 
-    <!-- CONSULTA AL ANALISTA (debajo del resumen) -->
-    <section class="grid grid-cols-1 gap-4">
-      <article class="card space-y-4">
-        <div class="flex items-center justify-between">
-          <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Consulta al analista</h3>
-          <div class="text-xs text-slate-500 dark:text-slate-400">Enter para enviar · Shift+Enter salto de línea</div>
+    <!-- Espaciado para la barra inferior en móvil -->
+    <div class="h-20 md:hidden"></div>
+  </main>
+
+  <!-- ====== Barra de acciones inferior (mobile) ====== -->
+  <nav class="fixed md:hidden bottom-0 inset-x-0 safe-bottom z-40">
+    <div class="mx-auto max-w-7xl px-4 pb-2">
+      <div class="glass border border-black/5 dark:border-white/10 rounded-2xl shadow-lg">
+        <div class="grid grid-cols-2 divide-x divide-black/5 dark:divide-white/10">
+          <button class="btn-ghost py-3" id="scrollTopBtn" aria-label="Ir arriba">
+            <div class="flex flex-col items-center gap-1">
+              <svg class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4l-7 7h4v7h6v-7h4z"/></svg>
+              <span class="text-[11px]">Arriba</span>
+            </div>
+          </button>
+          <button class="btn-ghost py-3" id="focusAskBtn" aria-label="Preguntar">
+            <div class="flex flex-col items-center gap-1">
+              <svg class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor"><path d="M4 4l16 8-16 8 4-8-4-8z"/></svg>
+              <span class="text-[11px]">Preguntar</span>
+            </div>
+          </button>
         </div>
-
-        <!-- Sugerencias rápidas -->
-        <div class="flex flex-wrap gap-2">
-          <button class="btn-secondary suggestion" data-q="¿Cómo ha evolucionado el AOV en los últimos 14 días?">AOV 14D</button>
-          <button class="btn-secondary suggestion" data-q="Top 5 días por ventas y explicación breve">Top días</button>
-          <button class="btn-secondary suggestion" data-q="¿Hay estacionalidad semanal?">Estacionalidad</button>
-        </div>
-
-        <!-- Input con avatar -->
-        <div class="relative">
-          <img id="userAvatar" src="/avatar.png" alt="Tu avatar" class="absolute left-3 top-2.5 h-8 w-8 rounded-full object-cover border border-white/40 dark:border-white/10 hidden" onerror="this.classList.add('hidden')">
-          <textarea id="ask" class="input w-full pl-14 pr-28 min-h-[80px] resize-y" placeholder="Escribe tu pregunta al analista…" aria-label="Pregunta al analista"></textarea>
-          <svg class="absolute left-4 top-3.5 h-5 w-5 text-slate-400" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a7 7 0 00-7 7 7 7 0 005 6.71V18a2 2 0 002 2h2a2 2 0 002-2v-2.29A7 7 0 0019 9a7 7 0 00-7-7z"/></svg>
-          <div class="absolute right-2 top-1.5 flex items-center gap-2">
-            <span id="charCount" class="text-xs text-slate-400">0</span>
-            <button id="askBtn" class="btn" aria-label="Enviar consulta">
-              <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M4 4l16 8-16 8 4-8-4-8z"/></svg>
-              Enviar
-            </button>
-          </div>
-        </div>
-
-        <div id="askOut" class="prose-md text-sm text-slate-800 dark:text-slate-100 min-h-[2.5rem] max-h-[260px] overflow-auto rounded-xl border-2 border-indigo-500/20 dark:border-indigo-400/20 p-3 bg-white/60 dark:bg-slate-900/40" aria-live="polite"></div>
-      </article>
-    </section>
-
-    <!-- Toast -->
-    <div id="toast" class="fixed left-1/2 -translate-x-1/2 bottom-6 hidden">
-      <div class="px-4 py-2 rounded-xl bg-slate-900 text-white shadow-lg">Hecho.</div>
+      </div>
     </div>
+  </nav>
+
+  <!-- Toast -->
+  <div id="toast" class="fixed left-1/2 -translate-x-1/2 bottom-24 md:bottom-6 hidden">
+    <div class="px-4 py-2 rounded-xl bg-slate-900 text-white shadow-lg">Hecho.</div>
   </div>
 
   <script>
-    const SHEET = "OrdersTable";
+    const SHEET = "OrdersTable"; //⚠️ Cambia si tu backend usa otro nombre
 
-    // Utils
+    // ===== Utilidades =====
     const fmtMoney = (n) => new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(n || 0);
     const fmt2 = (n) => new Intl.NumberFormat("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n || 0);
     const qs = (s) => document.querySelector(s);
@@ -208,7 +233,7 @@
     const elPeriod = qs("#periodChip");
     const toast    = qs("#toast");
 
-    // --- Fecha: Flatpickr robusto
+    // ===== Fechas: Flatpickr robusto =====
     const toISO = (d) => new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,10);
     const todayISO = () => toISO(new Date());
     const offsetDate = (days) => { const t = new Date(); t.setDate(t.getDate() + days); t.setHours(0,0,0,0); return toISO(t); };
@@ -220,17 +245,12 @@
       maxDate: todayISO(),
       locale: { rangeSeparator: " → ", firstDayOfWeek: 1 },
       onClose: (selectedDates, dateStr, instance) => {
-        // Arregla casos con un solo día seleccionado: usamos el mismo día como fin
-        if (selectedDates.length === 1) {
-          const d = selectedDates[0];
-          instance.setDate([toISO(d), toISO(d)], true);
-        }
+        if (selectedDates.length === 1) { const d = selectedDates[0]; instance.setDate([toISO(d), toISO(d)], true); }
       }
     });
 
     function getRange() {
       const d = fp.selectedDates;
-      // Si no hay dos fechas, usa default (30D)
       if (!d || d.length < 2) return [offsetDate(-29), todayISO()];
       const start = toISO(d[0]);
       const end = toISO(d[1]);
@@ -247,7 +267,6 @@
       if (p === "mtd") s = firstOfMonth;
       if (p === "ytd") s = firstOfYear;
       fp.setDate([s, e], true);
-      // Estado activo visual
       document.querySelectorAll('.preset').forEach(b=>b.classList.remove('ring-2','ring-indigo-500'));
       document.querySelector(`[data-preset="${p}"]`)?.classList.add('ring-2','ring-indigo-500');
       loadAll();
@@ -257,7 +276,7 @@
       btn.addEventListener("click", ()=> setPreset(btn.dataset.preset));
     });
 
-    // --- Chart
+    // ===== Chart =====
     let chart;
     function drawChart(series) {
       const ctx = document.getElementById("salesChart").getContext("2d");
@@ -285,25 +304,25 @@
     }
     matchMedia('(prefers-color-scheme: dark)').addEventListener('change', ()=> loadAll());
 
-    // Loaders
+    // ===== Loaders =====
     function setKPILoading() {
-      elTotal.className  = "kpi-value mt-1 skeleton h-10 w-40";
-      elOrders.className = "kpi-value mt-1 skeleton h-10 w-24";
-      elAOV.className    = "kpi-value mt-1 skeleton h-10 w-28";
+      elTotal.className  = "kpi-value mt-2 skeleton h-9 w-40";
+      elOrders.className = "kpi-value mt-2 skeleton h-9 w-24";
+      elAOV.className    = "kpi-value mt-2 skeleton h-9 w-28";
       elSummary.innerHTML = `<div class=\"skeleton h-5 w-11/12 mb-2\"></div>
                              <div class=\"skeleton h-5 w-10/12 mb-2\"></div>
                              <div class=\"skeleton h-5 w-9/12\"></div>`;
     }
     function setKPIValues({ totalSales, orders, aov }) {
-      elTotal.className  = "kpi-value mt-1";
-      elOrders.className = "kpi-value mt-1";
-      elAOV.className    = "kpi-value mt-1";
+      elTotal.className  = "kpi-value mt-2";
+      elOrders.className = "kpi-value mt-2";
+      elAOV.className    = "kpi-value mt-2";
       elTotal.textContent  = fmtMoney(totalSales);
       elOrders.textContent = orders ?? 0;
       elAOV.textContent    = fmt2(aov);
     }
 
-    // Data flow
+    // ===== Data flow =====
     async function loadAll() {
       const [start, end] = getRange();
       elPeriod.textContent = `${start} → ${end}`;
@@ -335,15 +354,9 @@
       }
     }
 
-    // --- Analista
-    function autosizeTextarea(el){
-      el.style.height = 'auto';
-      el.style.height = (el.scrollHeight) + 'px';
-    }
-    elAsk.addEventListener('input', ()=>{
-      autosizeTextarea(elAsk);
-      qs('#charCount').textContent = elAsk.value.length;
-    });
+    // ===== Analista =====
+    function autosizeTextarea(el){ el.style.height = 'auto'; el.style.height = (el.scrollHeight) + 'px'; }
+    elAsk.addEventListener('input', ()=>{ autosizeTextarea(elAsk); qs('#charCount').textContent = elAsk.value.length; });
 
     document.querySelectorAll('.suggestion').forEach(btn=>{
       btn.addEventListener('click', ()=>{ elAsk.value = btn.dataset.q; autosizeTextarea(elAsk); qs('#charCount').textContent = elAsk.value.length; elAsk.focus(); });
@@ -354,9 +367,7 @@
       try { await navigator.clipboard.writeText(text); toastFire('Resumen copiado'); } catch(e){ toastFire('No se pudo copiar'); }
     });
 
-    elAsk.addEventListener('keydown', (e)=>{
-      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); askAnalyst(); }
-    });
+    elAsk.addEventListener('keydown', (e)=>{ if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); askAnalyst(); } });
 
     async function askAnalyst() {
       const q = (elAsk.value || "").trim();
@@ -385,7 +396,7 @@
       }
     }
 
-    // UI helpers
+    // ===== UI helpers =====
     const refreshBtn = qs("#refreshBtn");
     refreshBtn.addEventListener("click", loadAll);
     elAskBtn.addEventListener("click", askAnalyst);
@@ -394,19 +405,18 @@
     function toggleAsk(disabled){
       elAskBtn.disabled = disabled;
       elAskBtn.innerHTML = disabled
-        ? `<svg class=\"h-5 w-5 animate-spin\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\"><circle cx=\"12\" cy=\"12\" r=\"10\" stroke-width=\"4\" opacity=\".25\"/><path d=\"M4 12a8 8 0 018-8\" stroke-width=\"4\" stroke-linecap=\"round\"/></svg> Procesando…`
-        : `<svg class=\"h-5 w-5\" viewBox=\"0 0 24 24\" fill=\"currentColor\"><path d=\"M4 4l16 8-16 8 4-8-4-8z\"/></svg> Enviar`;
+        ? `<svg class=\"h-5 w-5 animate-spin\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\"><circle cx=\"12\" cy=\"12\" r=\"10\" stroke-width=\"4\" opacity=\".25\"/><path d=\"M4 12a8 8 0 018-8\" stroke-width=\"4\" stroke-linecap=\"round\"/></svg> <span class=\"hidden sm:inline\">Procesando…</span>`
+        : `<svg class=\"h-5 w-5\" viewBox=\"0 0 24 24\" fill=\"currentColor\"><path d=\"M4 4l16 8-16 8 4-8-4-8z\"/></svg> <span class=\"hidden sm:inline\">Enviar</span>`;
     }
     function toastFire(msg){ toast.querySelector("div").textContent = msg || "Hecho."; toast.classList.remove("hidden"); setTimeout(()=> toast.classList.add("hidden"), 1500); }
+    function renderMarkdown(container, text){ try { container.innerHTML = marked.parse(text || ''); } catch { container.textContent = text || ''; } }
 
-    function renderMarkdown(container, text){
-      try { container.innerHTML = marked.parse(text || ''); }
-      catch { container.textContent = text || ''; }
-    }
+    // Accesos rápidos barra inferior
+    qs('#scrollTopBtn').addEventListener('click', ()=> window.scrollTo({ top: 0, behavior: 'smooth' }));
+    qs('#focusAskBtn').addEventListener('click', ()=> { document.getElementById('ask').focus({ preventScroll:false }); document.getElementById('ask').scrollIntoView({ behavior:'smooth', block:'center' }); });
 
     // Primer render
     loadAll();
   </script>
 </body>
 </html>
-
